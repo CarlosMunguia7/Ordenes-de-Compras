@@ -30,15 +30,38 @@ export default function MainLayout() {
                     borderBottom: '2px solid #e5e7eb',
                     background: 'linear-gradient(135deg, #16a34a, #15803d)'
                 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                        <img src="/logo.png" alt="Logo" style={{ width: '45px', height: '45px', objectFit: 'contain' }} />
-                        <h1 style={{
-                            fontSize: '24px',
-                            fontWeight: 'bold',
-                            color: 'white'
-                        }}>
-                            Ordenes App
-                        </h1>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
+                        <img
+                            src="/logo.png"
+                            alt="HC Logo"
+                            style={{
+                                width: '60px',
+                                height: '60px',
+                                objectFit: 'contain',
+                                background: 'white',
+                                padding: '8px',
+                                borderRadius: '12px',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+                            }}
+                        />
+                        <div>
+                            <h1 style={{
+                                fontSize: '22px',
+                                fontWeight: 'bold',
+                                color: 'white',
+                                marginBottom: '4px',
+                                letterSpacing: '0.5px'
+                            }}>
+                                Sistema de Órdenes
+                            </h1>
+                            <p style={{
+                                fontSize: '11px',
+                                color: 'rgba(255, 255, 255, 0.8)',
+                                fontWeight: '500'
+                            }}>
+                                HC - Gestión de Compras
+                            </p>
+                        </div>
                     </div>
                     <p style={{
                         fontSize: '12px',
