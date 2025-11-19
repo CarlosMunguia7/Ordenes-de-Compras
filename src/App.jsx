@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import MainLayout from './layouts/MainLayout';
 import NewOrder from './pages/NewOrder';
+import EditOrder from './pages/EditOrder';
 import MyOrders from './pages/MyOrders';
 import Approvals from './pages/Approvals';
 
@@ -28,6 +29,7 @@ function App() {
           }>
             <Route index element={<MyOrders />} />
             <Route path="new-order" element={<NewOrder />} />
+            <Route path="edit-order/:id" element={<EditOrder />} />
             <Route path="approvals" element={<Approvals />} />
           </Route>
         </Routes>

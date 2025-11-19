@@ -1,18 +1,70 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, Save } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Plus, Trash2, Save, ArrowLeft, AlertCircle } from 'lucide-react';
 
-export default function NewOrder() {
+export default function EditOrder() {
+    const { id } = useParams();
     const { user } = useAuth();
     const navigate = useNavigate();
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
     const [title, setTitle] = useState('');
     const [justification, setJustification] = useState('');
-    const [items, setItems] = useState([
-        { product_name: '', supplier: '', quantity: 1, unit_price: 0 }
-    ]);
+    const [reviewerNotes, setReviewerNotes] = useState('');
+    const [items, setItems] = useState([]);
+
+    useEffect(() => {
+        const fetchOrder = async () => {
+            try {
+                // Fetch order details
+                const { data: order, error: orderError } = await supabase
+                    .from('orders')
+                    .select('*')
+                    .eq('id', id)
+                    .single();
+
+                if (orderError) throw orderError;
+
+                // Verify ownership
+                if (order.user_id !== user.id) {
+                    alert('No tienes permiso para editar esta orden.');
+                    navigate('/');
+                    return;
+                }
+
+                // Only allow editing rejected or pending orders (optional logic)
+                if (order.status === 'approved') {
+                    alert('No puedes editar una orden ya aprobada.');
+                    navigate('/');
+                    return;
+                }
+
+                setTitle(order.title || '');
+                setJustification(order.justification);
+                setReviewerNotes(order.reviewer_notes);
+
+                // Fetch order items
+                const { data: orderItems, error: itemsError } = await supabase
+                    .from('order_items')
+                    .select('*')
+                    .eq('order_id', id);
+
+                if (itemsError) throw itemsError;
+
+                setItems(orderItems);
+            } catch (error) {
+                console.error('Error fetching order:', error);
+                alert('Error al cargar la orden.');
+                navigate('/');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (user && id) fetchOrder();
+    }, [user, id, navigate]);
 
     const addItem = () => {
         setItems([...items, { product_name: '', supplier: '', quantity: 1, unit_price: 0 }]);
@@ -32,30 +84,39 @@ export default function NewOrder() {
         return items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
     };
 
-    const handleSubmit = async (e) => {
+    const handleUpdate = async (e) => {
         e.preventDefault();
         if (!title.trim()) return alert('Por favor escribe un título para la orden');
-        if (!justification.trim()) return alert('Por favor escribe una justificación');
+        if (!justification) return alert('Por favor escribe una justificación');
         if (items.some(i => !i.product_name || i.quantity <= 0)) return alert('Revisa los items');
 
-        setLoading(true);
+        setSaving(true);
         try {
-            const { data: order, error: orderError } = await supabase
+            // Update order
+            const { error: orderError } = await supabase
                 .from('orders')
-                .insert({
-                    user_id: user.id,
+                .update({
                     title,
                     justification,
                     total_amount: calculateTotal(),
-                    status: 'pending'
+                    status: 'pending', // Reset status to pending after edit
+                    reviewer_notes: null // Clear rejection notes as it's a new submission
                 })
-                .select()
-                .single();
+                .eq('id', id);
 
             if (orderError) throw orderError;
 
+            // Delete existing items (simplest way to update items)
+            const { error: deleteError } = await supabase
+                .from('order_items')
+                .delete()
+                .eq('order_id', id);
+
+            if (deleteError) throw deleteError;
+
+            // Insert new items
             const orderItems = items.map(item => ({
-                order_id: order.id,
+                order_id: id,
                 product_name: item.product_name,
                 supplier: item.supplier,
                 quantity: parseInt(item.quantity),
@@ -68,19 +129,38 @@ export default function NewOrder() {
 
             if (itemsError) throw itemsError;
 
-            alert('Orden creada exitosamente!');
+            alert('Orden actualizada y enviada a revisión nuevamente.');
             navigate('/');
 
         } catch (error) {
-            console.error('Error creating order:', error);
-            alert('Error al crear la orden: ' + error.message);
+            console.error('Error updating order:', error);
+            alert('Error al actualizar la orden: ' + error.message);
         } finally {
-            setLoading(false);
+            setSaving(false);
         }
     };
 
+    if (loading) return <div style={{ color: 'white' }}>Cargando orden...</div>;
+
     return (
         <div>
+            <button
+                onClick={() => navigate('/')}
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    color: 'white',
+                    background: 'transparent',
+                    border: 'none',
+                    marginBottom: '20px',
+                    cursor: 'pointer',
+                    fontSize: '16px'
+                }}
+            >
+                <ArrowLeft size={20} /> Volver
+            </button>
+
             <h2 style={{
                 fontSize: '32px',
                 fontWeight: 'bold',
@@ -88,8 +168,28 @@ export default function NewOrder() {
                 marginBottom: '24px',
                 textShadow: '0 2px 8px rgba(0,0,0,0.3)'
             }}>
-                Nueva Orden de Compra
+                Editar Orden #{id}
             </h2>
+
+            {reviewerNotes && (
+                <div style={{
+                    background: '#fee2e2',
+                    borderLeft: '4px solid #dc2626',
+                    padding: '16px',
+                    borderRadius: '8px',
+                    marginBottom: '24px',
+                    color: '#991b1b',
+                    display: 'flex',
+                    gap: '12px',
+                    alignItems: 'start'
+                }}>
+                    <AlertCircle size={24} style={{ flexShrink: 0 }} />
+                    <div>
+                        <h4 style={{ fontWeight: 'bold', marginBottom: '4px' }}>Motivo del Rechazo:</h4>
+                        <p>{reviewerNotes}</p>
+                    </div>
+                </div>
+            )}
 
             <div style={{
                 background: 'rgba(255, 255, 255, 0.95)',
@@ -98,7 +198,7 @@ export default function NewOrder() {
                 boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)',
                 maxWidth: '1000px'
             }}>
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleUpdate}>
                     {/* Title */}
                     <div style={{ marginBottom: '24px' }}>
                         <label style={{
@@ -153,7 +253,6 @@ export default function NewOrder() {
                                 fontFamily: 'inherit'
                             }}
                             rows="3"
-                            placeholder="¿Por qué es necesaria esta compra?"
                             required
                         />
                     </div>
@@ -223,7 +322,7 @@ export default function NewOrder() {
                                         </label>
                                         <input
                                             type="text"
-                                            value={item.supplier}
+                                            value={item.supplier || ''}
                                             onChange={(e) => updateItem(index, 'supplier', e.target.value)}
                                             style={{
                                                 width: '100%',
@@ -315,7 +414,7 @@ export default function NewOrder() {
                     }}>
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={saving}
                             style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -327,13 +426,13 @@ export default function NewOrder() {
                                 border: 'none',
                                 fontSize: '16px',
                                 fontWeight: '600',
-                                cursor: loading ? 'not-allowed' : 'pointer',
-                                opacity: loading ? 0.6 : 1,
+                                cursor: saving ? 'not-allowed' : 'pointer',
+                                opacity: saving ? 0.6 : 1,
                                 boxShadow: '0 4px 12px rgba(22, 163, 74, 0.4)'
                             }}
                         >
                             <Save size={20} />
-                            {loading ? 'Guardando...' : 'Crear Orden'}
+                            {saving ? 'Guardando...' : 'Actualizar Orden'}
                         </button>
                     </div>
                 </form>
