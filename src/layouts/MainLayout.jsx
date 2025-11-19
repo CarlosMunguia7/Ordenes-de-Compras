@@ -13,9 +13,10 @@ export default function MainLayout() {
 
     return (
         <div style={{
-            minHeight: '100vh',
+            height: '100vh',
             background: 'linear-gradient(135deg, #166534 0%, #15803d 50%, #16a34a 100%)',
-            display: 'flex'
+            display: 'flex',
+            overflow: 'hidden'
         }}>
             {/* Sidebar */}
             <aside style={{
@@ -23,7 +24,8 @@ export default function MainLayout() {
                 background: 'rgba(255, 255, 255, 0.95)',
                 boxShadow: '4px 0 20px rgba(0, 0, 0, 0.3)',
                 display: 'flex',
-                flexDirection: 'column'
+                flexDirection: 'column',
+                height: '100vh'
             }}>
                 <div style={{
                     padding: '30px 24px',
@@ -197,7 +199,8 @@ export default function MainLayout() {
             <main style={{
                 flex: 1,
                 padding: '32px',
-                overflowY: 'auto'
+                overflowY: 'auto',
+                height: '100vh'
             }}>
                 <Outlet />
             </main>
